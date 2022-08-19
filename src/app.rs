@@ -318,7 +318,7 @@ impl App {
                     None
                 }
             })
-            .map(|c| c.commitments.local_commit.spec.to_local)
+            .map(|c| c.commitments.as_ref().map_or(0, |c| c.local_commit.spec.to_local))
             .sum()
     }
 
@@ -332,7 +332,7 @@ impl App {
                     None
                 }
             })
-            .map(|c| c.commitments.local_commit.spec.to_local)
+            .map(|c| c.commitments.as_ref().map_or(0, |c| c.local_commit.spec.to_local))
             .sum()
     }
 
@@ -346,7 +346,7 @@ impl App {
                     None
                 }
             })
-            .map(|c| c.commitments.local_commit.spec.to_local)
+            .map(|c| c.commitments.as_ref().map_or(0, |c| c.local_commit.spec.to_local))
             .sum()
     }
 
@@ -592,23 +592,24 @@ impl App {
                 .get(&chan.node_id)
                 .map(|n| n.alias.clone())
                 .unwrap_or_else(|| chan.node_id.clone()),
-            local: chan
-                .data
-                .as_ref()
-                .map_or(0, |c| c.commitments.local_commit.spec.to_local),
-            remote: chan
-                .data
-                .as_ref()
-                .map_or(0, |c| c.commitments.local_commit.spec.to_remote),
+            local: chan.data.as_ref().map_or(0, |c| {
+                c.commitments
+                    .as_ref()
+                    .map_or(0, |c| c.local_commit.spec.to_local)
+            }),
+            remote: chan.data.as_ref().map_or(0, |c| {
+                c.commitments
+                    .as_ref()
+                    .map_or(0, |c| c.local_commit.spec.to_remote)
+            }),
             relays_amount: relays.iter().map(|_| 1).sum(),
             relays_volume: relays.iter().map(|r| r.amount_in).sum(),
             relays_fees: relays.iter().map(|r| r.amount_in - r.amount_out).sum(),
             info_id: i,
             public: chan.data.as_ref().map_or(false, |c| {
                 c.commitments
-                    .channel_flags
-                    .announce_channel
-                    .unwrap_or(false)
+                    .as_ref()
+                    .map_or(false, |c| c.channel_flags.announce_channel.unwrap_or(false))
             }),
             channel_ext: if chan.data.is_none() {
                 ChannelExt::Hosted

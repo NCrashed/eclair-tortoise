@@ -1,7 +1,6 @@
-
-use serde::{Deserialize, Serialize};
-use super::node::NodeFeatures;
 use super::common::*;
+use super::node::NodeFeatures;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -15,7 +14,10 @@ pub struct ChannelInfo {
 impl ChannelInfo {
     pub fn volume(&self) -> u64 {
         self.data.as_ref().map_or(0, |d| {
-            let s = &d.commitments.local_commit.spec; s.to_local + s.to_remote
+            d.commitments.as_ref().map_or(0, |c| {
+                let s = &c.local_commit.spec;
+                s.to_local + s.to_remote
+            })
         })
     }
 }
@@ -29,6 +31,7 @@ pub enum ChannelState {
     Closed,
     Offline,
     Syncing,
+    WaitForFundingCreated,
     WaitForFundingSigned,
     WaitForFundingConfirmed,
     WaitForFundingLocked,
@@ -43,12 +46,12 @@ impl ChannelState {
 
     pub fn is_pending(self) -> bool {
         self == ChannelState::Closing
-        || self == ChannelState::Opening
-        || self == ChannelState::Syncing
-        || self == ChannelState::WaitForFundingConfirmed
-        || self == ChannelState::WaitForFundingLocked
-        || self == ChannelState::WaitForFundingSigned
-        || self == ChannelState::WaitForAcceptChannel
+            || self == ChannelState::Opening
+            || self == ChannelState::Syncing
+            || self == ChannelState::WaitForFundingConfirmed
+            || self == ChannelState::WaitForFundingLocked
+            || self == ChannelState::WaitForFundingSigned
+            || self == ChannelState::WaitForAcceptChannel
     }
 
     pub fn is_sleeping(self) -> bool {
@@ -63,12 +66,11 @@ pub enum HtlcDirection {
     Out,
 }
 
-
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ChannelData {
     pub _type: String,
-    pub commitments: ChannelCommitments,
+    pub commitments: Option<ChannelCommitments>,
     pub short_channel_id: Option<String>,
     pub buried: Option<bool>,
     pub channel_announcement: Option<ChannelAnnouncement>,
@@ -96,7 +98,7 @@ pub struct ChannelCommitments {
     pub remote_per_commitment_secrets: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Serialize, Debug,  PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 #[serde(untagged)]
 pub enum RemoteNextCommit {
     Simple(String),
@@ -111,7 +113,6 @@ pub struct RemoteNextCommitInfo {
     sent_after_local_commit_index: u32,
     re_sign_asap: bool,
 }
-
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -186,7 +187,6 @@ pub struct HtlcTx {
     pub payment_hash: Option<String>,
     pub htlc_id: u32,
 }
-
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -302,7 +302,6 @@ pub struct ChannelAnnouncement {
     pub bitcoin_key2: String,
     pub tlv_stream: TlvStream,
 }
-
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
